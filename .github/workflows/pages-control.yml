@@ -1,0 +1,39 @@
+name: Pages exact control
+run-name: Pages exact control
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare inert marker
+        shell: bash
+        env:
+          CONTROL_MARKER: A_CONTROL_0a8589ab0c7692d3ec960379af1b133b
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          printf '%s\n' "$CONTROL_MARKER" > site/index.html
+      - name: Upload Pages artifact
+        id: upload
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - name: Deploy Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Record safe IDs
+        shell: bash
+        run: |
+          printf 'repository=%s\nartifact_id=%s\npage_url=%s\n' "$GITHUB_REPOSITORY" '${{ steps.upload.outputs.artifact_id }}' '${{ steps.deployment.outputs.page_url }}'
